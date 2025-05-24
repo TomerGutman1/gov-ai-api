@@ -45,7 +45,7 @@ def load_dataframe() -> pd.DataFrame:
         offset = 0
         
         while True:
-            response = supabase.table("decision_summaries").select("*").range(offset, offset + page_size - 1).execute()
+            response = supabase.table("israeli_government_decisions").select("*").range(offset, offset + page_size - 1).execute()
             
             if not response.data:
                 break
@@ -60,7 +60,7 @@ def load_dataframe() -> pd.DataFrame:
             logger.info(f"Loaded {len(all_data)} records so far...")
         
         if not all_data:
-            logger.warning("No data found in decision_summaries table")
+            logger.warning("No data found in israeli_government_decisions table")
             return pd.DataFrame()
         
         df = pd.DataFrame(all_data)
@@ -281,7 +281,7 @@ async def health_check():
     try:
         supabase = get_supabase_client()
         # Simple query to test connection
-        supabase.table("decision_summaries").select("id").limit(1).execute()
+        supabase.table("israeli_government_decisions").select("id").limit(1).execute()
         health_status["database"] = "healthy"
     except:
         health_status["database"] = "unhealthy"
@@ -305,7 +305,7 @@ async def get_count():
     try:
         supabase = get_supabase_client()
         # Use count parameter to get total count efficiently
-        response = supabase.table("decision_summaries").select("*", count='exact').execute()
+        response = supabase.table("israeli_government_decisions").select("*", count='exact').execute()
         
         return {
             "total_records": response.count,
