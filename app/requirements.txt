@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pandas
+supabase
+openai
+python-dotenv
+python-multipart
+numpy
+pandasai

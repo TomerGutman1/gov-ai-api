@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: gov-ai-api-dev
+    env_file: .env
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount app directory for hot reload
+      - ./app:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_ENV=development
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
