@@ -22,8 +22,16 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
-# Set PandasAI log path to writable directory
+# Set PandasAI paths to writable directories
 os.environ['PANDASAI_LOG_PATH'] = '/tmp/pandasai.log'
+os.environ['PANDASAI_CACHE_PATH'] = '/tmp/pandasai_cache'
+
+# Create necessary directories
+for dir_path in ['/tmp/exports', '/tmp/pandasai_cache']:
+    os.makedirs(dir_path, exist_ok=True)
+
+# Change working directory to /tmp to avoid filesystem issues
+os.chdir('/tmp')
 
 # ---- Initialize Supabase Client ----
 def get_supabase_client() -> Client:
@@ -84,15 +92,20 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
     llm = OpenAI(api_token=api_key, model="gpt-4o")
     
     # Configure PandasAI for better Hebrew support and conversational answers
-    # Disable cache and logs to avoid filesystem issues in Docker
+    # Use temp directories to avoid filesystem issues in Docker
     config = {
         "llm": llm,
         "conversational": True,
         "enable_cache": False,
         "save_logs": False,
+        "save_charts": False,
+        "save_charts_path": "/tmp/charts",
+        "save_dfs": False,
+        "custom_whitelisted_dependencies": [],
         "max_retries": 2,
         "verbose": False,
         "enforce_privacy": True,
+        "use_error_correction_framework": False,
         "custom_prompts": {
             "generate_python_code": """
             You are analyzing Israeli government decisions data.
