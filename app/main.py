@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+# Set PandasAI log path to writable directory
+os.environ['PANDASAI_LOG_PATH'] = '/tmp/pandasai.log'
+
 # ---- Initialize Supabase Client ----
 def get_supabase_client() -> Client:
     """Initialize and return Supabase client"""
@@ -81,13 +84,14 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
     llm = OpenAI(api_token=api_key, model="gpt-4o")
     
     # Configure PandasAI for better Hebrew support and conversational answers
-    # Disable cache to avoid filesystem issues in Docker
+    # Disable cache and logs to avoid filesystem issues in Docker
     config = {
         "llm": llm,
         "conversational": True,
         "enable_cache": False,
+        "save_logs": False,
         "max_retries": 2,
-        "verbose": True,
+        "verbose": False,
         "enforce_privacy": True,
         "custom_prompts": {
             "generate_python_code": """
