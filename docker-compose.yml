@@ -13,6 +13,7 @@ services:
       - ./app:/app:ro
     environment:
       - PYTHONUNBUFFERED=1
+      - PANDASAI_CACHE_DIR=/tmp/cache
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

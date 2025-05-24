@@ -20,6 +20,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application code
 COPY app .
 
+# Create cache directory with proper permissions
+RUN mkdir -p /tmp/cache && chmod 777 /tmp/cache
+
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
 USER appuser

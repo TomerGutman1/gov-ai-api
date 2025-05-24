@@ -45,7 +45,7 @@ def load_dataframe() -> pd.DataFrame:
         offset = 0
         
         while True:
-            response = supabase.table("israeli_government_decisions").select("*").range(offset, offset + page_size - 1).execute()
+            response = supabase.table("decision_summaries").select("*").range(offset, offset + page_size - 1).execute()
             
             if not response.data:
                 break
@@ -60,7 +60,7 @@ def load_dataframe() -> pd.DataFrame:
             logger.info(f"Loaded {len(all_data)} records so far...")
         
         if not all_data:
-            logger.warning("No data found in israeli_government_decisions table")
+            logger.warning("No data found in decision_summaries table")
             return pd.DataFrame()
         
         df = pd.DataFrame(all_data)
@@ -81,10 +81,20 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
     llm = OpenAI(api_token=api_key, model="gpt-4o")
     
     # Configure PandasAI for better Hebrew support and conversational answers
+    cache_dir = os.getenv("PANDASAI_CACHE_DIR", "/tmp/cache")
+    
+    # Ensure cache directory exists and is writable
+    try:
+        os.makedirs(cache_dir, exist_ok=True)
+    except:
+        # If we can't create the directory, disable cache
+        cache_dir = None
+    
     config = {
         "llm": llm,
         "conversational": True,
-        "enable_cache": True,
+        "enable_cache": cache_dir is not None,
+        "cache_dir": cache_dir,
         "max_retries": 2,
         "verbose": True,
         "enforce_privacy": True,
@@ -142,20 +152,25 @@ app.add_middleware(
 # Load data on startup
 df = None
 sdf = None
+data_loaded = False
 
 @app.on_event("startup")
 async def startup_event():
     """Load data and initialize PandasAI on startup"""
-    global df, sdf
+    global df, sdf, data_loaded
     try:
+        logger.info("Starting data load...")
         df = load_dataframe()
         if not df.empty:
             sdf = initialize_pandasai(df)
-            logger.info("Successfully initialized PandasAI")
+            data_loaded = True
+            logger.info(f"Successfully initialized PandasAI with {len(df)} records")
         else:
             logger.warning("Starting with empty dataframe")
+            data_loaded = False
     except Exception as e:
         logger.error(f"Startup error: {str(e)}")
+        data_loaded = False
 
 # ---- API Endpoints ----
 @app.get("/")
@@ -164,7 +179,7 @@ async def root():
     return {
         "status": "healthy",
         "service": "Government AI API",
-        "data_loaded": df is not None and not df.empty
+        "data_loaded": data_loaded
     }
 
 @app.post("/ask", response_model=AnswerResponse)
@@ -176,7 +191,7 @@ async def ask_question(request: QuestionRequest):
     Questions can be in Hebrew or English.
     """
     try:
-        if sdf is None:
+        if sdf is None or not data_loaded:
             raise HTTPException(
                 status_code=503,
                 detail="Service not ready. Data not loaded."
@@ -227,17 +242,21 @@ async def get_stats():
 @app.post("/reload")
 async def reload_data():
     """Reload data from Supabase"""
-    global df, sdf
+    global df, sdf, data_loaded
     try:
+        logger.info("Reloading data from Supabase...")
         df = load_dataframe()
         if not df.empty:
             sdf = initialize_pandasai(df)
+            data_loaded = True
+            logger.info(f"Successfully reloaded {len(df)} records")
             return {
                 "success": True,
                 "message": f"Reloaded {len(df)} records",
                 "records_count": len(df)
             }
         else:
+            data_loaded = False
             return {
                 "success": False,
                 "message": "No data found in database",
@@ -245,6 +264,7 @@ async def reload_data():
             }
     except Exception as e:
         logger.error(f"Reload error: {str(e)}")
+        data_loaded = False
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
@@ -261,7 +281,7 @@ async def health_check():
     try:
         supabase = get_supabase_client()
         # Simple query to test connection
-        supabase.table("israeli_government_decisions").select("id").limit(1).execute()
+        supabase.table("decision_summaries").select("id").limit(1).execute()
         health_status["database"] = "healthy"
     except:
         health_status["database"] = "unhealthy"
@@ -285,7 +305,7 @@ async def get_count():
     try:
         supabase = get_supabase_client()
         # Use count parameter to get total count efficiently
-        response = supabase.table("israeli_government_decisions").select("*", count='exact').execute()
+        response = supabase.table("decision_summaries").select("*", count='exact').execute()
         
         return {
             "total_records": response.count,
