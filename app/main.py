@@ -81,20 +81,11 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
     llm = OpenAI(api_token=api_key, model="gpt-4o")
     
     # Configure PandasAI for better Hebrew support and conversational answers
-    cache_dir = os.getenv("PANDASAI_CACHE_DIR", "/tmp/cache")
-    
-    # Ensure cache directory exists and is writable
-    try:
-        os.makedirs(cache_dir, exist_ok=True)
-    except:
-        # If we can't create the directory, disable cache
-        cache_dir = None
-    
+    # Disable cache to avoid filesystem issues in Docker
     config = {
         "llm": llm,
         "conversational": True,
-        "enable_cache": cache_dir is not None,
-        "cache_dir": cache_dir,
+        "enable_cache": False,
         "max_retries": 2,
         "verbose": True,
         "enforce_privacy": True,
