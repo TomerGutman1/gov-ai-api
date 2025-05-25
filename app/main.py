@@ -109,7 +109,7 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
         "custom_prompts": {
             "generate_python_code": """
             You are analyzing Israeli government decisions data.
-            The data may contain Hebrew text, so handle encoding properly.
+            The data contains Hebrew text, so handle encoding properly.
             Generate Python code to answer: {question}
             
             Available columns: {columns}
@@ -121,6 +121,21 @@ def initialize_pandasai(df: pd.DataFrame) -> SmartDataframe:
             2. Handle Hebrew text encoding if needed
             3. Return clear, informative results
             4. Be aware this is a large dataset with over 24,000 records
+            
+            Return answers **only** in clean English—no raw DataFrame dumps, no indexes, no column names.
+
+            When decisions are requested, output each decision as one bullet in exactly this format:
+
+            • Decision <decision_number> – <decision_title>  
+            <summary up to 120 characters>  
+            <decision_url>
+
+            List each decision on a separate bullet.
+
+            If no decisions match, return: **“No matching decisions found.”**
+
+            Add nothing else—no extra text, table headers, or indices.
+            
             """.replace("{total_records}", str(len(df)))
         }
     }
